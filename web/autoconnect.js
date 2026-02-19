@@ -53,6 +53,9 @@ function addImageNodes(sourceNode, nodeType, count, jobIdSlot) {
         graph.add(newNode);
         newNode.pos = [startX, startY];
         sourceNode.connect(0, newNode, 0);
+        if (nodeType === "SaveImage" && jobIdSlot >= 0) {
+            sourceNode.connect(jobIdSlot, newNode, 1);
+        }
         maxX = startX + newNode.size[0];
         maxY = startY + newNode.size[1];
     } else {
@@ -73,6 +76,9 @@ function addImageNodes(sourceNode, nodeType, count, jobIdSlot) {
             ];
 
             sourceNode.connect(i, newNode, 0);
+            if (nodeType === "SaveImage" && jobIdSlot >= 0) {
+                sourceNode.connect(jobIdSlot, newNode, 1);
+            }
 
             maxX = Math.max(maxX, newNode.pos[0] + w);
             maxY = Math.max(maxY, newNode.pos[1] + h);
