@@ -1,0 +1,33 @@
+volumetric fog
+god rays
+volumetric light shafts
+holographic display
+holographic projection
+particle explosion
+energy field
+force field effect
+plasma arc
+lightning bolt effect
+cinematic lens flare
+anamorphic lens flare
+neon glow bloom
+light bloom effect
+motion blur trail
+depth of field bokeh
+shallow depth of field
+smoke simulation
+fire simulation
+water simulation VFX
+shockwave ring effect
+dimensional portal effect
+glowing particle cloud
+bioluminescent particles
+aurora borealis effect
+electric discharge effect
+holographic UI overlay
+floating data stream
+time freeze shatter effect
+gravitational distortion
+hyperspace warp effect
+dust mote particles
+chromatic light dispersion
