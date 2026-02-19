@@ -5,7 +5,7 @@ import folder_paths
 
 _PLUGIN_KEYWORDS_DIR = Path(__file__).parent / "keywords"
 _COMFY_ROOT = Path(folder_paths.base_path)
-_USER_KEYWORDS_DIR = _COMFY_ROOT / "user" / "mj_keywords"
+_USER_KEYWORDS_DIR = _COMFY_ROOT / "user" / "mj" / "keywords"
 
 
 def _load_keywords(path: Path) -> list[str]:
@@ -17,16 +17,27 @@ def _load_keywords(path: Path) -> list[str]:
     ]
 
 
-def _collect_keyword_files() -> dict[str, Path]:
-    """두 경로를 스캔. 동일 stem은 user 경로가 우선. stem → Path 반환."""
-    files: dict[str, Path] = {}
-    if _PLUGIN_KEYWORDS_DIR.is_dir():
-        for p in sorted(_PLUGIN_KEYWORDS_DIR.glob("*.txt")):
-            files[p.stem] = p
-    if _USER_KEYWORDS_DIR.is_dir():
-        for p in sorted(_USER_KEYWORDS_DIR.glob("*.txt")):
-            files[p.stem] = p
+def _collect_keyword_files() -> dict[str, list[Path]]:
+    """두 경로를 스캔. 동일 stem이면 두 파일 모두 수집. stem → [Path, ...] 반환."""
+    files: dict[str, list[Path]] = {}
+    for directory in (_PLUGIN_KEYWORDS_DIR, _USER_KEYWORDS_DIR):
+        if not directory.is_dir():
+            continue
+        for p in sorted(directory.glob("*.txt")):
+            files.setdefault(p.stem, []).append(p)
     return files
+
+
+def _merge_keywords(paths: list[Path]) -> list[str]:
+    """여러 파일의 키워드를 순서 유지하며 중복 없이 병합."""
+    seen: set[str] = set()
+    merged: list[str] = []
+    for path in paths:
+        for kw in _load_keywords(path):
+            if kw not in seen:
+                seen.add(kw)
+                merged.append(kw)
+    return merged
 
 
 def _make_keyword_node(node_id: str, display_name: str, keywords: list[str]):
@@ -55,10 +66,10 @@ def _make_keyword_node(node_id: str, display_name: str, keywords: list[str]):
 
 
 def load_keyword_nodes() -> list[type[io.ComfyNode]]:
-    """두 경로를 스캔해 노드 목록 반환. 사용자 파일 우선."""
+    """두 경로를 스캔해 노드 목록 반환. 동일 stem 파일은 병합."""
     nodes = []
-    for stem, path in sorted(_collect_keyword_files().items()):
-        keywords = _load_keywords(path)
+    for stem, paths in sorted(_collect_keyword_files().items()):
+        keywords = _merge_keywords(paths)
         if not keywords:
             continue
         display_name = stem.replace("_", " ").title()
