@@ -23,6 +23,7 @@ from .nodes import (
 )
 from .node_keywords import KEYWORD_NODES
 from .node_keyword_join import MidJourneyKeywordJoin
+from .node_style import MJ_StyleSelect
 
 WEB_DIRECTORY = "./web"
 
@@ -37,6 +38,7 @@ _NODES = [
     MidJourneyDownload,
     *KEYWORD_NODES,
     MidJourneyKeywordJoin,
+    MJ_StyleSelect,
 ]
 
 
