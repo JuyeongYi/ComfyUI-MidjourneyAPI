@@ -7,8 +7,9 @@ from aiohttp import web as aiohttp_web
 from server import PromptServer
 from comfy_api.latest import io
 import folder_paths
+from .. import _DIR
 
-_PLUGIN_STYLE_DIR = Path(__file__).parent / "mj" / "style"
+_PLUGIN_STYLE_DIR = _DIR / "mj" / "style"
 _COMFY_ROOT = Path(folder_paths.base_path)
 _USER_STYLE_DIR = _COMFY_ROOT / "user" / "mj" / "style"
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}

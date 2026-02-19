@@ -6,9 +6,8 @@ import torch
 from comfy_api.latest import io, ui
 from comfy_execution.graph import ExecutionBlocker
 
-from .node_imagine_v7_params import ImagineV7Params, MJ_PARAMS  # noqa: F401
-from .node_params_io import LoadImagineParams, SaveImagineParams  # noqa: F401
-from .utils import (
+from .params import MJ_PARAMS
+from ..utils import (
     download_and_load_images,
     get_client,
     log_job,
@@ -229,5 +228,3 @@ class MidJourneyDownload(io.ComfyNode):
         ]
         return io.NodeOutput(*outputs,
                              ui=_preview_ui(preview) if preview is not None else None)
-
-

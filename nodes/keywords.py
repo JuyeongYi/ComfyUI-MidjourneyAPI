@@ -7,8 +7,9 @@
 from pathlib import Path
 from comfy_api.latest import io
 import folder_paths
+from .. import _DIR
 
-_PLUGIN_KEYWORDS_DIR = Path(__file__).parent / "mj" / "keywords"
+_PLUGIN_KEYWORDS_DIR = _DIR / "mj" / "keywords"
 _COMFY_ROOT = Path(folder_paths.base_path)
 _USER_KEYWORDS_DIR = _COMFY_ROOT / "user" / "mj" / "keywords"
 
