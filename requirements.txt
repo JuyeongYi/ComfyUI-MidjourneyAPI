@@ -1,0 +1,2 @@
+midjourney-api @ git+https://github.com/JuyeongYi/PythonMidjourneyAPIClient.git
+python-dotenv
