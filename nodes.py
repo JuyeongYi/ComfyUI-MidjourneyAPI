@@ -39,8 +39,6 @@ class MidJourneyImagine(io.ComfyNode):
                 io.String.Input("no", display_name="Negative", default="",
                                 multiline=True, tooltip="네거티브 프롬프트 (--no)"),
                 MJ_PARAMS.Input("params", optional=True),
-                io.Int.Input("size", default=1024, min=64, max=2048,
-                             optional=True, tooltip="다운로드 이미지 크기"),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -52,7 +50,7 @@ class MidJourneyImagine(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, prompt, no, params=None, size=1024) -> io.NodeOutput:
+    def execute(cls, prompt, no, params=None) -> io.NodeOutput:
         client = get_client()
 
         kwargs = dict(params) if params else {}
@@ -64,7 +62,7 @@ class MidJourneyImagine(io.ComfyNode):
         job = client.imagine(prompt, wait=False, mode=mode, **kwargs)
         log_job("Imagine", job.id, prompt=prompt, mode=mode, **kwargs)
         job = poll_with_progress(job, mode=mode)
-        images = download_and_load_images(job, size=size)
+        images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
                              ui=_preview_ui(images))
 
@@ -89,7 +87,6 @@ class MidJourneyVary(io.ComfyNode):
                 io.Boolean.Input("strong", default=True,
                                  tooltip="True=Strong, False=Subtle"),
                 io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
-                io.Int.Input("size", default=1024, min=64, max=2048),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -101,13 +98,13 @@ class MidJourneyVary(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, strong, mode, size) -> io.NodeOutput:
+    def execute(cls, job_id, index, strong, mode) -> io.NodeOutput:
         client = get_client()
         label = "Strong" if strong else "Subtle"
         job = client.vary(job_id, index, strong=strong, wait=False, mode=mode)
         log_job(f"Vary ({label})", job.id, mode=mode, source=job_id, index=index)
         job = poll_with_progress(job, mode=mode)
-        images = download_and_load_images(job, size=size)
+        images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
                              ui=_preview_ui(images))
 
@@ -133,7 +130,6 @@ class MidJourneyUpscale(io.ComfyNode):
                                options=["v7_2x_subtle", "v7_2x_creative"],
                                default="v7_2x_subtle"),
                 io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
-                io.Int.Input("size", default=1024, min=64, max=2048),
             ],
             outputs=[
                 io.Image.Output(display_name="image"),
@@ -142,12 +138,12 @@ class MidJourneyUpscale(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, upscale_type, mode, size) -> io.NodeOutput:
+    def execute(cls, job_id, index, upscale_type, mode) -> io.NodeOutput:
         client = get_client()
         job = client.upscale(job_id, index, upscale_type=upscale_type, wait=False, mode=mode)
         log_job("Upscale", job.id, mode=mode, source=job_id, index=index, type=upscale_type)
         job = poll_with_progress(job, mode=mode)
-        images = download_and_load_images(job, size=size, indices=[0])
+        images = download_and_load_images(job, indices=[0])
         return io.NodeOutput(images, job.id,
                              ui=_preview_ui(images))
 
@@ -175,7 +171,6 @@ class MidJourneyPan(io.ComfyNode):
                 io.String.Input("prompt", default="", multiline=True, optional=True,
                                 tooltip="추가 프롬프트 (선택)"),
                 io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
-                io.Int.Input("size", default=1024, min=64, max=2048),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -187,12 +182,12 @@ class MidJourneyPan(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, direction, mode, size, prompt="") -> io.NodeOutput:
+    def execute(cls, job_id, index, direction, mode, prompt="") -> io.NodeOutput:
         client = get_client()
         job = client.pan(job_id, index, direction=direction, prompt=prompt or "", wait=False, mode=mode)
         log_job(f"Pan ({direction})", job.id, prompt=prompt, mode=mode, source=job_id, index=index)
         job = poll_with_progress(job, mode=mode)
-        images = download_and_load_images(job, size=size)
+        images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
                              ui=_preview_ui(images))
 
@@ -211,8 +206,6 @@ class MidJourneyDownload(io.ComfyNode):
             description="Job ID로 이미지를 다운로드합니다. 4장이면 4장, 1장(Upscale)이면 1장 출력.",
             inputs=[
                 io.String.Input("job_id", tooltip="다운로드할 Job ID"),
-                io.Int.Input("size", default=1024, min=64, max=2048,
-                             optional=True, tooltip="다운로드 이미지 크기"),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -223,11 +216,11 @@ class MidJourneyDownload(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, size=1024) -> io.NodeOutput:
+    def execute(cls, job_id) -> io.NodeOutput:
         from midjourney_api.models import Job
         job = Job(id=job_id, prompt="")
         job.image_urls = [job.cdn_url(i) for i in range(4)]
-        results = try_download_all(job, size=size)
+        results = try_download_all(job)
         valid = [r for r in results if r is not None]
         preview = torch.cat(valid, dim=0) if valid else None
         outputs = [
@@ -236,32 +229,5 @@ class MidJourneyDownload(io.ComfyNode):
         ]
         return io.NodeOutput(*outputs,
                              ui=_preview_ui(preview) if preview is not None else None)
-
-
-# ---------------------------------------------------------------------------
-# 9. CommonResolution — 해상도 프리셋
-# ---------------------------------------------------------------------------
-
-class CommonResolution(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(
-            node_id="MJ_CommonResolution",
-            display_name="Common Resolution",
-            category="Midjourney/utils",
-            description="일반적인 가로 해상도 프리셋",
-            inputs=[
-                io.Combo.Input("resolution",
-                               options=["640", "1024"],
-                               default="1024"),
-            ],
-            outputs=[
-                io.Int.Output(display_name="size"),
-            ],
-        )
-
-    @classmethod
-    def execute(cls, resolution) -> io.NodeOutput:
-        return io.NodeOutput(int(resolution))
 
 

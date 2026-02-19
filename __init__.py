@@ -12,7 +12,6 @@ from comfy_api.latest import ComfyExtension, io
 from typing_extensions import override
 
 from .nodes import (
-    CommonResolution,
     ImagineV7Params,
     LoadImagineParams,
     MidJourneyDownload,
@@ -22,6 +21,8 @@ from .nodes import (
     MidJourneyVary,
     SaveImagineParams,
 )
+from .node_keywords import KEYWORD_NODES
+from .node_keyword_join import MidJourneyKeywordJoin
 
 WEB_DIRECTORY = "./web"
 
@@ -34,7 +35,8 @@ _NODES = [
     MidJourneyUpscale,
     MidJourneyPan,
     MidJourneyDownload,
-    CommonResolution,
+    *KEYWORD_NODES,
+    MidJourneyKeywordJoin,
 ]
 
 

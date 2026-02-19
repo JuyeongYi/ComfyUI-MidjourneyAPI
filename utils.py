@@ -77,12 +77,11 @@ def poll_with_progress(
 
 def download_and_load_images(
     job: Job,
-    size: int = 640,
     indices: list[int] | None = None,
 ) -> torch.Tensor:
     """Download job images in memory, return [N,H,W,C] float32 tensor."""
     client = get_client()
-    data_list = client.download_images_bytes(job, size=size, indices=indices)
+    data_list = client.download_images_bytes(job, size=1024, indices=indices)
     tensors: list[torch.Tensor] = []
     for data in data_list:
         img = Image.open(BytesIO(data)).convert("RGB")
@@ -93,13 +92,12 @@ def download_and_load_images(
 
 def try_download_all(
     job: Job,
-    size: int = 1024,
 ) -> list[torch.Tensor | None]:
     """Try downloading indices 0-3. Returns list of 4 tensors (None if failed)."""
     results: list[torch.Tensor | None] = []
     for i in range(4):
         try:
-            t = download_and_load_images(job, size=size, indices=[i])
+            t = download_and_load_images(job, indices=[i])
             results.append(t)
         except Exception:
             results.append(None)
