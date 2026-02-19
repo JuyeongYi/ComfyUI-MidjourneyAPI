@@ -17,7 +17,7 @@ class MidJourneyKeywordJoin(io.ComfyNode):
                         io.String.Input("keyword", default=""),
                         prefix="keyword",
                         min=1,
-                        max=32,
+                        max=100,
                     ),
                 ),
                 io.Combo.Input("separator", options=[", ", " ", " | ", " + "], default=", "),
