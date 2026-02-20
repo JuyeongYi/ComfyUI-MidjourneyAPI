@@ -24,7 +24,7 @@ app.registerExtension({
 
             const count = cfg.imageCount;
             const plural = count > 1 ? "s" : "";
-            options.unshift(
+            const menuItems = [
                 {
                     content: `Connect Preview Image${plural}`,
                     callback: () => addImageNodes(this, "PreviewImage", count, cfg.jobIdSlot),
@@ -33,10 +33,96 @@ app.registerExtension({
                     content: `Connect Save Image${plural}`,
                     callback: () => addImageNodes(this, "SaveImage", count, cfg.jobIdSlot),
                 },
-            );
+            ];
+
+            if (cfg.jobIdSlot >= 0) {
+                menuItems.push({
+                    content: "Midjourney",
+                    submenu: {
+                        options: [
+                            {
+                                content: "Vary",
+                                submenu: {
+                                    options: [
+                                        {
+                                            content: "Strong",
+                                            callback: () => addJobNodes(this, "MJ_Vary", cfg.jobIdSlot, cfg.imageCount, { strong: true }),
+                                        },
+                                        {
+                                            content: "Subtle",
+                                            callback: () => addJobNodes(this, "MJ_Vary", cfg.jobIdSlot, cfg.imageCount, { strong: false }),
+                                        },
+                                    ],
+                                },
+                            },
+                            {
+                                content: "Upscale",
+                                submenu: {
+                                    options: [
+                                        {
+                                            content: "Subtle",
+                                            callback: () => addJobNodes(this, "MJ_Upscale", cfg.jobIdSlot, cfg.imageCount, { upscale_type: "v7_2x_subtle" }),
+                                        },
+                                        {
+                                            content: "Creative",
+                                            callback: () => addJobNodes(this, "MJ_Upscale", cfg.jobIdSlot, cfg.imageCount, { upscale_type: "v7_2x_creative" }),
+                                        },
+                                    ],
+                                },
+                            },
+                            {
+                                content: "Pan",
+                                submenu: {
+                                    options: [
+                                        { arrow: "↑", dir: "up" },
+                                        { arrow: "↓", dir: "down" },
+                                        { arrow: "←", dir: "left" },
+                                        { arrow: "→", dir: "right" },
+                                    ].map(({ arrow, dir }) => ({
+                                        content: arrow,
+                                        callback: () => addJobNodes(this, "MJ_Pan", cfg.jobIdSlot, cfg.imageCount, { direction: dir }),
+                                    })),
+                                },
+                            },
+                        ],
+                    },
+                });
+            }
+
+            options.unshift(...menuItems);
         };
     },
 });
+
+function addJobNodes(sourceNode, nodeType, jobIdSlot, count, widgetOverrides = {}) {
+    const graph = app.graph;
+    const gap = 150;
+    const startX = sourceNode.pos[0] + sourceNode.size[0] + 200;
+    const startY = sourceNode.pos[1];
+
+    for (let i = 0; i < count; i++) {
+        const newNode = LiteGraph.createNode(nodeType);
+        if (!newNode) return;
+        graph.add(newNode);
+
+        newNode.pos = [startX, startY + i * (newNode.size[1] + gap)];
+
+        // job_id 출력 → 새 노드의 job_id 입력(슬롯 0) 연결
+        sourceNode.connect(jobIdSlot, newNode, 0);
+
+        // index 위젯 설정
+        const indexWidget = newNode.widgets?.find(w => w.name === "index");
+        if (indexWidget) indexWidget.value = i;
+
+        // widgetOverrides 적용 (strong, direction 등)
+        for (const [name, value] of Object.entries(widgetOverrides)) {
+            const w = newNode.widgets?.find(w => w.name === name);
+            if (w) w.value = value;
+        }
+    }
+
+    graph.setDirtyCanvas(true, true);
+}
 
 function addImageNodes(sourceNode, nodeType, count, jobIdSlot) {
     const graph = app.graph;
