@@ -9,7 +9,7 @@ class MidJourneyKeywordJoin(io.ComfyNode):
             node_id="MJ_KeywordJoin",
             display_name="Keyword Join",
             category="Midjourney/keywords",
-            description="여러 키워드 문자열을 하나로 합칩니다.",
+            description="유저 프롬프트와 여러 키워드를 하나로 합칩니다.",
             inputs=[
                 io.Autogrow.Input(
                     "keywords",
@@ -20,6 +20,11 @@ class MidJourneyKeywordJoin(io.ComfyNode):
                         max=100,
                     ),
                 ),
+                io.String.Input("base", display_name="Base Keywords", default="",
+                                multiline=True, optional=True,
+                                tooltip="유저 프롬프트 — 그대로 첫 번째 항목으로 추가됩니다."),
+                io.Combo.Input("prompt_position", display_name="Prompt on",
+                               options=["First", "Last"], default="First"),
                 io.Combo.Input("separator", options=[", ", " ", " | ", " + "], default=", "),
             ],
             outputs=[
@@ -28,6 +33,8 @@ class MidJourneyKeywordJoin(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, keywords: io.Autogrow.Type, separator=", ") -> io.NodeOutput:
-        parts = [v.strip() for v in keywords.values() if v and v.strip()]
+    def execute(cls, keywords: io.Autogrow.Type, base="", prompt_position="First", separator=", ") -> io.NodeOutput:
+        kw_parts = [v.strip() for v in keywords.values() if v and v.strip()]
+        base_part = [base.strip()] if base and base.strip() else []
+        parts = base_part + kw_parts if prompt_position == "First" else kw_parts + base_part
         return io.NodeOutput(separator.join(parts))

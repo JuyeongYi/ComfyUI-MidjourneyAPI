@@ -6,6 +6,7 @@ import torch
 from comfy_api.latest import io, ui
 from comfy_execution.graph import ExecutionBlocker
 
+from .const import *
 from .params import MJ_PARAMS
 from ..utils import (
     download_and_load_images,
@@ -85,7 +86,7 @@ class MidJourneyVary(io.ComfyNode):
                              tooltip="변형할 이미지 인덱스 (0-3)"),
                 io.Boolean.Input("strong", default=True,
                                  tooltip="True=Strong, False=Subtle"),
-                io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
+                io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -126,9 +127,9 @@ class MidJourneyUpscale(io.ComfyNode):
                 io.Int.Input("index", default=0, min=0, max=3,
                              tooltip="확대할 이미지 인덱스 (0-3)"),
                 io.Combo.Input("upscale_type",
-                               options=["v7_2x_subtle", "v7_2x_creative"],
-                               default="v7_2x_subtle"),
-                io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
+                               options=list(UpscaleType),
+                               default=UpscaleType.SUBTLE),
+                io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
             ],
             outputs=[
                 io.Image.Output(display_name="image"),
@@ -165,11 +166,11 @@ class MidJourneyPan(io.ComfyNode):
                 io.Int.Input("index", default=0, min=0, max=3,
                              tooltip="확장할 이미지 인덱스 (0-3)"),
                 io.Combo.Input("direction",
-                               options=["up", "down", "left", "right"],
-                               default="up"),
+                               options=list(PanDirection),
+                               default=PanDirection.UP),
                 io.String.Input("prompt", default="", multiline=True, optional=True,
                                 tooltip="추가 프롬프트 (선택)"),
-                io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
+                io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),

@@ -5,6 +5,7 @@ from __future__ import annotations
 import torch
 from comfy_api.latest import io
 
+from .const import *
 from ..utils import image_tensor_to_temp_file, list_presets, load_preset, save_preset
 
 # Custom type for passing parameter dicts between nodes
@@ -28,14 +29,14 @@ class ImagineV7Params(io.ComfyNode):
                 io.Int.Input("chaos", default=0, min=0, max=100),
                 io.Int.Input("weird", default=0, min=0, max=3000),
                 io.Int.Input("seed", default=0, min=0, max=4294967295, control_after_generate=True),
-                io.Combo.Input("quality", options=["1", "2", "4"], default="1"),
+                io.Combo.Input("quality", options=QUALITY_OPTIONS, default=QUALITY_OPTIONS[0]),
                 io.Boolean.Input("raw", default=False),
                 io.Boolean.Input("tile", default=False),
                 io.Boolean.Input("draft", default=False),
-                io.Combo.Input("mode", options=["fast", "relax", "turbo"], default="fast"),
-                io.Combo.Input("visibility", options=["default", "stealth", "public"],
+                io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
+                io.Combo.Input("visibility", options=VISIBILITY_OPTIONS,
                                default="default", tooltip="공개/비공개 설정"),
-                io.Combo.Input("personalize", options=["off", "default", "custom"], default="off",
+                io.Combo.Input("personalize", options=list(PersonalizeMode), default=PersonalizeMode.OFF,
                                tooltip="개인화 모드"),
                 io.String.Input("personalize_code", default="",
                                 tooltip="개인화 코드 (custom 모드에서만 사용)"),
