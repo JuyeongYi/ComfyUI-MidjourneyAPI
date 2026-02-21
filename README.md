@@ -115,6 +115,24 @@ enqueue = true
 
 여러 Imagine 노드를 enqueue=true로 동시에 실행하면 미드저니 큐에 작업을 쌓아두고 병렬로 처리시킬 수 있습니다.
 
+### enqueue=true가 자동으로 무시되는 경우
+
+enqueue=true로 설정해도, **job_id 출력이 다른 MJ 생성 노드에 연결되어 있으면** 자동으로 enqueue=false로 동작합니다.
+
+대상 노드: Vary, Remix, Upscale, Pan, Animate, ExtendVideo
+
+```
+Imagine(enqueue=true) → job_id → MJ_Vary
+  → enqueue 무시, 정상 폴링 후 이미지 반환
+  (이유: Vary는 완료된 이미지가 필요하므로 enqueue가 의미 없음)
+
+Imagine(enqueue=true) → job_id → MJ_Download
+  → enqueue 유지, 즉시 job_id 반환
+  (이유: Download는 나중에 실행 가능)
+```
+
+콘솔에 `[MJ] Imagine: enqueue 무시 — job_id가 생성 노드에 연결됨` 메시지가 출력됩니다.
+
 ---
 
 ## 우클릭 메뉴

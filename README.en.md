@@ -115,6 +115,24 @@ enqueue = true
 
 Run multiple Imagine nodes with `enqueue = true` to queue several jobs in parallel and let Midjourney process them concurrently.
 
+### When enqueue=true is automatically ignored
+
+Even if `enqueue=true`, it is automatically overridden to `false` when the **job_id output is connected to another MJ generation node**.
+
+Affected nodes: Vary, Remix, Upscale, Pan, Animate, ExtendVideo
+
+```
+Imagine(enqueue=true) → job_id → MJ_Vary
+  → enqueue ignored, normal polling + image returned
+  (reason: Vary requires a completed job, so enqueue makes no sense)
+
+Imagine(enqueue=true) → job_id → MJ_Download
+  → enqueue kept, job_id returned immediately
+  (reason: Download can be run later)
+```
+
+A console message is printed: `[MJ] Imagine: enqueue 무시 — job_id가 생성 노드에 연결됨`
+
 ---
 
 ## Right-Click Menu
