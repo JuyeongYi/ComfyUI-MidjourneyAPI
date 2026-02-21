@@ -24,3 +24,12 @@ underwater atmosphere
 post-apocalyptic
 cozy
 intimate
+
+hopeful
+triumphant
+oppressive
+tranquil
+chaotic
+reverent
+euphoric
+foreboding

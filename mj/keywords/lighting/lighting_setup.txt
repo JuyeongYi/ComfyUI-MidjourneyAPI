@@ -1,0 +1,30 @@
+three-point lighting
+two-point lighting
+single key light
+high-key lighting
+low-key lighting
+Rembrandt lighting
+butterfly lighting (paramount)
+split lighting
+loop lighting
+broad lighting
+short lighting
+rim lighting (hair light)
+backlight silhouette
+contre-jour
+top lighting (overhead)
+underlighting (kicker from below)
+side lighting
+cross lighting
+flat lighting
+motivated lighting (practical light source)
+neon sign light
+window diffused light
+softbox diffused
+hard directional light
+fill light only
+no fill (pure shadow side)
+practical lamp source
+bounce light
+gobo shadow pattern
+LED panel light

@@ -1,0 +1,35 @@
+dolly in
+dolly out
+dolly zoom (vertigo effect)
+push in slowly
+pull back slowly
+zoom in slowly
+zoom out slowly
+pan left
+pan right
+tilt up
+tilt down
+orbit shot
+360-degree orbit
+arc shot
+crane up
+crane down
+pedestal up
+pedestal down
+tracking shot
+follow shot
+handheld
+steadicam tracking
+FPV (first-person view)
+POV shot
+slider left
+slider right
+truck in
+truck out
+whip pan
+static locked off
+rack focus
+macro push-in
+hyperlapse
+aerial descend
+aerial rise

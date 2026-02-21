@@ -1,0 +1,30 @@
+bleach bypass
+orange and teal
+teal shadows
+lifted blacks
+crushed blacks
+film emulation
+cross-processed
+day for night
+golden warmth
+cool blue grade
+high contrast grade
+low contrast grade
+matte finish grade
+vivid saturation
+faded vintage look
+green tint
+magenta push
+skin tone preservation
+highlight rolloff
+shadow detail
+cinematic grade
+kodak emulation
+fuji emulation
+agfa emulation
+analog warmth
+digital cool
+HDR tone mapping
+desaturated grade
+hyper-real color
+noir grade
