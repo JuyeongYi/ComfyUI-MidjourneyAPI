@@ -1,3 +1,11 @@
 .env
 __pycache__/
 *.pyc
+
+# Cython build artifacts
+*.so
+*.pyd
+*.c
+build/
+dist/
+_setup_cython.py
