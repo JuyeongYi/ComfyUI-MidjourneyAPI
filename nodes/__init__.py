@@ -16,6 +16,7 @@ from .params import ImagineV7Params, SaveImagineParams, LoadImagineParams, MJ_PA
 from .style import MJ_StyleSelect
 from .keywords import KEYWORD_NODES
 from .keyword_join import MidJourneyKeywordJoin
+from .keyword_random import MidJourneyKeywordRandom
 
 __all__ = [
     "MidJourneyImagine",
@@ -38,4 +39,5 @@ __all__ = [
     "MJ_StyleSelect",
     "KEYWORD_NODES",
     "MidJourneyKeywordJoin",
+    "MidJourneyKeywordRandom",
 ]

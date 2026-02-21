@@ -24,6 +24,7 @@ from .nodes import (
     VideoParams,
     KEYWORD_NODES,
     MidJourneyKeywordJoin,
+    MidJourneyKeywordRandom,
     MJ_StyleSelect,
     MidJourneyAnimate,
     MidJourneyAnimateFromImage,
@@ -50,6 +51,7 @@ _NODES = [
     MidJourneyLoadVideo,
     *KEYWORD_NODES,
     MidJourneyKeywordJoin,
+    MidJourneyKeywordRandom,
     MJ_StyleSelect,
 ]
 
