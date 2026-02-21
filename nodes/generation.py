@@ -23,6 +23,18 @@ def _preview_ui(images: torch.Tensor) -> ui.PreviewImage:
     return ui.PreviewImage(images)
 
 
+
+def _enqueue_image_outputs(job, n: int = 4) -> io.NodeOutput:
+    """enqueue=True일 때: 이미지 n개를 ExecutionBlocker로 차단하고 job_id만 반환."""
+    blockers = [ExecutionBlocker(None)] * n
+    return io.NodeOutput(*blockers, job.id)
+
+
+def _enqueue_video_output(job) -> io.NodeOutput:
+    """enqueue=True일 때: 비디오 노드용 — job_id만 즉시 반환."""
+    return io.NodeOutput(job.id)
+
+
 # ---------------------------------------------------------------------------
 # 4. MidJourneyImagine — 이미지 생성
 # ---------------------------------------------------------------------------
