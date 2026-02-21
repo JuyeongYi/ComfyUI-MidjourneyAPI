@@ -32,15 +32,26 @@ Custom nodes for ComfyUI that generate Midjourney images via [midjourney-api](ht
 |------|-------------|---------|
 | **MidJourney Imagine** | Text-to-image generation | 4 images + job_id |
 | **MidJourney Vary** | Strong/Subtle variation | 4 images + job_id |
+| **MidJourney Remix** | Variation with a new prompt | 4 images + job_id |
 | **MidJourney Upscale** | 2× upscale (subtle/creative) | 1 image + job_id |
 | **MidJourney Pan** | Directional image extension | 4 images + job_id |
 | **MidJourney Download** | Download images by job ID | 4 images |
+
+### Video Generation
+
+| Node | Description | Outputs |
+|------|-------------|---------|
+| **MidJourney Animate** | Image → video from an Imagine job | job_id |
+| **MidJourney Animate From Image** | Video from image tensors (start/end frame) | job_id |
+| **MidJourney Extend Video** | Extend a completed video job | job_id |
+| **MidJourney Load Video** | Load video by job ID into memory | VIDEO |
 
 ### Parameters
 
 | Node | Description |
 |------|-------------|
 | **Imagine V7 Params** | V7 parameter configuration (aspect ratio, stylize, chaos, seed, quality, raw, tile, sref, oref, personalize, visibility, etc.) |
+| **Video Params** | Video parameter configuration (motion, resolution, batch_size, stealth) |
 | **Save Imagine Params** | Save parameters as a JSON preset |
 | **Load Imagine Params** | Load parameters from a JSON preset |
 
@@ -54,12 +65,16 @@ Custom nodes for ComfyUI that generate Midjourney images via [midjourney-api](ht
 
 **Keyword Join** — Combines multiple keyword strings into one (separator: `, ` / ` ` / ` | ` / ` + `, up to 100 inputs).
 
+**Keyword Random** — Pick one keyword at random from any category file. A fixed seed always returns the same keyword, making results reproducible.
+
 **Per-category keyword nodes** — Each outputs the selected keyword as a String. Found under `Midjourney/keywords/<category>` in the node menu.
 
 | Category | Nodes | Included |
 |----------|-------|----------|
 | **Photography** | 9 | Shot Type, Lens, Camera Effect, Film Stock, Camera Body, Composition, Perspective, Post Processing, Detail Quality |
-| **Lighting** | 3 | Lighting, Color Tone, Mood |
+| **Lighting** | 4 | Lighting, Color Tone, Mood, Lighting Setup |
+| **Color** | 2 | Color Palette, Color Grading |
+| **Video** | 3 | Camera Movement, Subject Motion, Time Motion |
 | **Environment** | 7 | Environment, Natural Landscape, Underwater Scene, Urban Setting, Weather, Season, Celestial |
 | **Art Style** | 6 | Art Style, Art Medium, Era Aesthetic, Illustration Style, Print Technique, Street Art Style |
 | **Digital Fx** | 6 | Render Engine, Game Art Style, Vfx Style, Glitch Aesthetic, Dimensionality, Particle Effects |
@@ -69,7 +84,7 @@ Custom nodes for ComfyUI that generate Midjourney images via [midjourney-api](ht
 | **Material** | 4 | Texture Material, Material Finish, Pattern Design, Typography Style |
 | **Subject** | 7 | Flora Style, Creature Type, Sport Activity, Food Styling, Vehicle Type, Scientific Visualization, Data Visualization |
 
-Total: **56 category files, ~1,845 keywords**.
+Total: **63 category files, ~2,040 keywords**.
 
 ---
 
@@ -81,6 +96,24 @@ Total: **56 category files, ~1,845 keywords**.
 - In-memory image processing for downloads (no temp file I/O)
 - Event-based progress reporting
 - `ExecutionBlocker` for missing image slots (e.g., Upscale returns 1 image, remaining 3 slots are blocked)
+- **Enqueue mode** — Every job-submitting node has an `enqueue` toggle. When `true`, the node submits the job and returns `job_id` immediately without polling, blocking image/video outputs. Use with MJ_Download / MJ_Load Video to retrieve results later and take full advantage of Midjourney's job queue.
+
+---
+
+## Enqueue Workflow
+
+All job-submitting nodes (Imagine, Vary, Remix, Upscale, Pan, Animate, AnimateFromImage, ExtendVideo) have an `enqueue` Boolean input.
+
+```
+enqueue = false (default)
+  → submit job → poll until complete → return images/video
+
+enqueue = true
+  → submit job → return job_id immediately (image outputs blocked)
+  → retrieve results later with MJ_Download / MJ_Load Video
+```
+
+Run multiple Imagine nodes with `enqueue = true` to queue several jobs in parallel and let Midjourney process them concurrently.
 
 ---
 

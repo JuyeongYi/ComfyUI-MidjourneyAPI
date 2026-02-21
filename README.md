@@ -32,15 +32,26 @@
 |------|------|------|
 | **MidJourney Imagine** | 텍스트→이미지 생성 | 이미지 4장 + job_id |
 | **MidJourney Vary** | Strong/Subtle 변형 | 이미지 4장 + job_id |
+| **MidJourney Remix** | 새 프롬프트로 변형 | 이미지 4장 + job_id |
 | **MidJourney Upscale** | 2× 업스케일 (subtle/creative) | 이미지 1장 + job_id |
 | **MidJourney Pan** | 방향별 이미지 확장 | 이미지 4장 + job_id |
 | **MidJourney Download** | Job ID로 이미지 다운로드 | 이미지 4장 |
+
+### 비디오 생성
+
+| 노드 | 설명 | 출력 |
+|------|------|------|
+| **MidJourney Animate** | 이미지 → 비디오 변환 (Imagine job 기준) | job_id |
+| **MidJourney Animate From Image** | 이미지 텐서로 비디오 생성 (시작/종료 프레임 지정 가능) | job_id |
+| **MidJourney Extend Video** | 완료된 비디오 연장 | job_id |
+| **MidJourney Load Video** | 비디오 Job ID로 비디오 로드 | VIDEO |
 
 ### 파라미터
 
 | 노드 | 설명 |
 |------|------|
 | **Imagine V7 Params** | V7 파라미터 설정 (aspect ratio, stylize, chaos, seed, quality, raw, tile, sref, oref, personalize, visibility 등) |
+| **Video Params** | 비디오 파라미터 설정 (motion, resolution, batch_size, stealth) |
 | **Save Imagine Params** | 파라미터를 JSON 프리셋으로 저장 |
 | **Load Imagine Params** | JSON 프리셋에서 파라미터 로드 |
 
@@ -54,12 +65,16 @@
 
 **Keyword Join** — 여러 키워드를 하나의 문자열로 결합 (구분자: `, ` / ` ` / ` | ` / ` + ` 선택 가능, 최대 100개 입력).
 
+**Keyword Random** — 카테고리(파일)를 선택하고 seed를 지정하면 해당 키워드 풀에서 무작위로 1개를 출력. seed가 같으면 항상 같은 키워드를 반환.
+
 **카테고리별 키워드 노드** — 드롭다운에서 선택한 키워드를 String으로 출력. `Midjourney/keywords/<카테고리>` 메뉴에서 찾을 수 있음.
 
 | 카테고리 | 노드 수 | 포함 노드 |
 |---------|---------|-----------|
 | **Photography** | 9 | Shot Type, Lens, Camera Effect, Film Stock, Camera Body, Composition, Perspective, Post Processing, Detail Quality |
-| **Lighting** | 3 | Lighting, Color Tone, Mood |
+| **Lighting** | 4 | Lighting, Color Tone, Mood, Lighting Setup |
+| **Color** | 2 | Color Palette, Color Grading |
+| **Video** | 3 | Camera Movement, Subject Motion, Time Motion |
 | **Environment** | 7 | Environment, Natural Landscape, Underwater Scene, Urban Setting, Weather, Season, Celestial |
 | **Art Style** | 6 | Art Style, Art Medium, Era Aesthetic, Illustration Style, Print Technique, Street Art Style |
 | **Digital Fx** | 6 | Render Engine, Game Art Style, Vfx Style, Glitch Aesthetic, Dimensionality, Particle Effects |
@@ -69,7 +84,7 @@
 | **Material** | 4 | Texture Material, Material Finish, Pattern Design, Typography Style |
 | **Subject** | 7 | Flora Style, Creature Type, Sport Activity, Food Styling, Vehicle Type, Scientific Visualization, Data Visualization |
 
-총 **56개 카테고리 파일, 약 1,845개 키워드**.
+총 **63개 카테고리 파일, 약 2,040개 키워드**.
 
 ---
 
@@ -81,6 +96,24 @@
 - 다운로드 이미지 인메모리 처리 (임시 파일 없음)
 - 이벤트 기반 진행 상태 보고
 - 이미지 누락 슬롯에 `ExecutionBlocker` 적용 (예: Upscale은 1장만 반환, 나머지 3슬롯 블록)
+- **Enqueue 모드** — 모든 잡 서밋 노드에 `enqueue` 토글 추가. `true`로 설정하면 잡을 서밋한 뒤 폴링 없이 즉시 `job_id`만 반환 (이미지/비디오 출력은 차단). 미드저니의 큐잉 기능을 활용해 여러 작업을 동시에 쌓아두고 나중에 MJ_Download / MJ_Load Video로 결과를 회수하는 워크플로우에 사용.
+
+---
+
+## Enqueue 워크플로우
+
+모든 잡 서밋 노드(Imagine, Vary, Remix, Upscale, Pan, Animate, AnimateFromImage, ExtendVideo)에 `enqueue` Boolean 입력이 있습니다.
+
+```
+enqueue = false (기본값)
+  → 잡 서밋 → 폴링 → 완료 시 이미지/비디오 반환
+
+enqueue = true
+  → 잡 서밋 → 즉시 job_id 반환 (이미지 출력은 ExecutionBlocker로 차단)
+  → 나중에 MJ_Download / MJ_Load Video 노드로 결과 회수
+```
+
+여러 Imagine 노드를 enqueue=true로 동시에 실행하면 미드저니 큐에 작업을 쌓아두고 병렬로 처리시킬 수 있습니다.
 
 ---
 
