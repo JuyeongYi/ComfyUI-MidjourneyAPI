@@ -53,6 +53,8 @@ class MidJourneyImagine(io.ComfyNode):
                 io.String.Input("no", display_name="Negative", default="",
                                 multiline=True, tooltip="네거티브 프롬프트 (--no)"),
                 MJ_PARAMS.Input("params", optional=True),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환 (폴링 없음). job_id로 나중에 MJ_Download"),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -64,7 +66,7 @@ class MidJourneyImagine(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, prompt, no, params=None) -> io.NodeOutput:
+    def execute(cls, prompt, no, params=None, enqueue=False) -> io.NodeOutput:
         client = get_client()
 
         kwargs = dict(params) if params else {}
@@ -75,6 +77,8 @@ class MidJourneyImagine(io.ComfyNode):
 
         job = client.imagine(prompt, wait=False, mode=mode, **kwargs)
         log_job("Imagine", job.id, prompt=prompt, mode=mode, **kwargs)
+        if enqueue:
+            return _enqueue_image_outputs(job, n=4)
         job = poll_with_progress(job, mode=mode)
         images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
@@ -101,6 +105,8 @@ class MidJourneyVary(io.ComfyNode):
                 io.Boolean.Input("strong", default=True,
                                  tooltip="True=Strong, False=Subtle"),
                 io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환. job_id로 나중에 MJ_Download"),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -112,11 +118,13 @@ class MidJourneyVary(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, strong, mode) -> io.NodeOutput:
+    def execute(cls, job_id, index, strong, mode, enqueue=False) -> io.NodeOutput:
         client = get_client()
         label = "Strong" if strong else "Subtle"
         job = client.vary(job_id, index, strong=strong, wait=False, mode=mode)
         log_job(f"Vary ({label})", job.id, mode=mode, source=job_id, index=index)
+        if enqueue:
+            return _enqueue_image_outputs(job, n=4)
         job = poll_with_progress(job, mode=mode)
         images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
@@ -146,6 +154,8 @@ class MidJourneyRemix(io.ComfyNode):
                 io.Boolean.Input("strong", default=True,
                                  tooltip="True=Strong, False=Subtle"),
                 MJ_PARAMS.Input("params", optional=True),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환. job_id로 나중에 MJ_Download"),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -157,7 +167,7 @@ class MidJourneyRemix(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, prompt, no, strong, params=None) -> io.NodeOutput:
+    def execute(cls, job_id, index, prompt, no, strong, params=None, enqueue=False) -> io.NodeOutput:
         client = get_client()
         kwargs = dict(params) if params else {}
         mode = kwargs.pop("mode", SpeedMode.FAST)
@@ -168,6 +178,8 @@ class MidJourneyRemix(io.ComfyNode):
         job = client.remix(job_id, index, prompt,
                            strong=strong, wait=False, mode=mode, stealth=stealth, **kwargs)
         log_job(f"Remix ({label})", job.id, prompt=prompt, mode=mode, source=job_id, index=index, **kwargs)
+        if enqueue:
+            return _enqueue_image_outputs(job, n=4)
         job = poll_with_progress(job, mode=mode)
         images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
@@ -195,6 +207,8 @@ class MidJourneyUpscale(io.ComfyNode):
                                options=list(UpscaleType),
                                default=UpscaleType.SUBTLE),
                 io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환. job_id로 나중에 MJ_Download"),
             ],
             outputs=[
                 io.Image.Output(display_name="image"),
@@ -203,10 +217,12 @@ class MidJourneyUpscale(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, upscale_type, mode) -> io.NodeOutput:
+    def execute(cls, job_id, index, upscale_type, mode, enqueue=False) -> io.NodeOutput:
         client = get_client()
         job = client.upscale(job_id, index, upscale_type=upscale_type, wait=False, mode=mode)
         log_job("Upscale", job.id, mode=mode, source=job_id, index=index, type=upscale_type)
+        if enqueue:
+            return _enqueue_image_outputs(job, n=1)
         job = poll_with_progress(job, mode=mode)
         images = download_and_load_images(job, indices=[0])
         return io.NodeOutput(images, job.id,
@@ -238,6 +254,8 @@ class MidJourneyPan(io.ComfyNode):
                 io.String.Input("no", display_name="Negative", default="",
                                 multiline=True, tooltip="네거티브 프롬프트 (--no)"),
                 io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환. job_id로 나중에 MJ_Download"),
             ],
             outputs=[
                 io.Image.Output(display_name="image_0"),
@@ -249,10 +267,12 @@ class MidJourneyPan(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, direction, prompt="", no="", mode=SpeedMode.FAST) -> io.NodeOutput:
+    def execute(cls, job_id, index, direction, prompt="", no="", mode=SpeedMode.FAST, enqueue=False) -> io.NodeOutput:
         client = get_client()
         job = client.pan(job_id, index, direction=direction, prompt=_build_prompt(prompt, no), wait=False, mode=mode)
         log_job(f"Pan ({direction})", job.id, prompt=prompt, mode=mode, source=job_id, index=index)
+        if enqueue:
+            return _enqueue_image_outputs(job, n=4)
         job = poll_with_progress(job, mode=mode)
         images = download_and_load_images(job)
         return io.NodeOutput(images[0:1], images[1:2], images[2:3], images[3:4], job.id,
