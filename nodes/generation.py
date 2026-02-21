@@ -364,6 +364,8 @@ class MidJourneyAnimate(io.ComfyNode):
                                 tooltip="추가 프롬프트 (선택)"),
                 io.String.Input("no", display_name="Negative", default="",
                                 multiline=True, tooltip="네거티브 프롬프트 (--no)"),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환 (폴링 없음)"),
             ],
             outputs=[
                 MJ_JOB_ID.Output(display_name="job_id"),
@@ -371,11 +373,13 @@ class MidJourneyAnimate(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, job_id, index, video_params=None, prompt="", no="") -> io.NodeOutput:
+    def execute(cls, job_id, index, video_params=None, prompt="", no="", enqueue=False) -> io.NodeOutput:
         client = get_client()
         kw = _video_kwargs(video_params)
         job = client.animate(job_id, index, prompt=_build_prompt(prompt, no), wait=False, **kw)
         log_job("Animate", job.id, source=job_id, index=index, **kw)
+        if enqueue:
+            return _enqueue_video_output(job)
         job = poll_with_progress(job, mode=kw["mode"])
         return io.NodeOutput(job.id)
 
@@ -402,6 +406,8 @@ class MidJourneyAnimateFromImage(io.ComfyNode):
                                 tooltip="추가 프롬프트 (선택)"),
                 io.String.Input("no", display_name="Negative", default="",
                                 multiline=True, tooltip="네거티브 프롬프트 (--no)"),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환 (폴링 없음)"),
             ],
             outputs=[
                 MJ_JOB_ID.Output(display_name="job_id"),
@@ -410,7 +416,7 @@ class MidJourneyAnimateFromImage(io.ComfyNode):
 
     @classmethod
     def execute(cls, start_image, end_image=None, loop=False, video_params=None,
-                prompt="", no="") -> io.NodeOutput:
+                prompt="", no="", enqueue=False) -> io.NodeOutput:
         client = get_client()
         start_path = image_tensor_to_temp_file(start_image)
         if loop:
@@ -423,6 +429,8 @@ class MidJourneyAnimateFromImage(io.ComfyNode):
         job = client.animate_from_image(start_path, end_path, prompt=_build_prompt(prompt, no),
                                         wait=False, **kw)
         log_job("AnimateFromImage", job.id, **kw)
+        if enqueue:
+            return _enqueue_video_output(job)
         job = poll_with_progress(job, mode=kw["mode"])
         return io.NodeOutput(job.id)
 
@@ -451,6 +459,8 @@ class MidJourneyExtendVideo(io.ComfyNode):
                                 tooltip="추가 프롬프트 (선택)"),
                 io.String.Input("no", display_name="Negative", default="",
                                 multiline=True, tooltip="네거티브 프롬프트 (--no)"),
+                io.Boolean.Input("enqueue", default=False,
+                                 tooltip="True: 잡 서밋 후 즉시 반환 (폴링 없음)"),
             ],
             outputs=[
                 MJ_JOB_ID.Output(display_name="job_id"),
@@ -459,7 +469,7 @@ class MidJourneyExtendVideo(io.ComfyNode):
 
     @classmethod
     def execute(cls, job_id, index, loop=False, video_params=None,
-                end_image=None, prompt="", no="") -> io.NodeOutput:
+                end_image=None, prompt="", no="", enqueue=False) -> io.NodeOutput:
         client = get_client()
         if loop:
             end_path = "loop"
@@ -471,6 +481,8 @@ class MidJourneyExtendVideo(io.ComfyNode):
         job = client.extend_video(job_id, index, end_image=end_path,
                                   prompt=_build_prompt(prompt, no), wait=False, **kw)
         log_job("ExtendVideo", job.id, source=job_id, index=index, **kw)
+        if enqueue:
+            return _enqueue_video_output(job)
         job = poll_with_progress(job, mode=kw["mode"])
         return io.NodeOutput(job.id)
 
