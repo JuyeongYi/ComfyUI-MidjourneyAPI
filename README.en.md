@@ -119,23 +119,24 @@ Run multiple Imagine nodes with `enqueue = true` to queue several jobs in parall
 
 Even if `enqueue=true`, it is automatically overridden to `false` when outputs are connected. The rule differs by node type.
 
-**Image nodes** (Imagine, Vary, Remix, Upscale, Pan): ignored if **any** output is connected
+The decision is based on the output connection type:
+
+| Connection type | Condition |
+|----------------|-----------|
+| **Image output** | Ignored if connected to anything |
+| **job_id output** | Ignored only if connected to an MJ job-submitting node (Vary/Remix/Upscale/Pan/Animate/ExtendVideo) |
 
 ```
 Imagine(enqueue=true) → image_0 → PreviewImage
-  → enqueue ignored, normal polling + images returned
+  → enqueue ignored (Image output connected)
+
+Imagine(enqueue=true) → job_id → MJ_Vary
+  → enqueue ignored (job_id connected to MJ job-submitting node)
+
+Imagine(enqueue=true) → job_id → MJ_Download
+  → enqueue kept, job_id returned immediately (Download is not a job-submitting node)
 
 Imagine(enqueue=true) → [no output connections]
-  → enqueue kept, job_id returned immediately
-```
-
-**Video nodes** (Animate, AnimateFromImage, ExtendVideo): ignored only if job_id is connected to **an MJ generation node**
-
-```
-Animate(enqueue=true) → job_id → MJ_ExtendVideo
-  → enqueue ignored, normal polling + job_id returned
-
-Animate(enqueue=true) → job_id → MJ_LoadVideo
   → enqueue kept, job_id returned immediately
 ```
 

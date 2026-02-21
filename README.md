@@ -119,23 +119,24 @@ enqueue = true
 
 enqueue=true로 설정해도 출력이 연결되어 있으면 자동으로 enqueue=false로 동작합니다. 노드 종류에 따라 판단 기준이 다릅니다.
 
-**이미지 노드** (Imagine, Vary, Remix, Upscale, Pan): **어떤 노드에든** 출력이 연결되어 있으면 무시
+출력 연결 타입에 따라 판단합니다.
+
+| 연결 타입 | 조건 |
+|----------|------|
+| **Image 출력** | 어디든 연결되면 무시 |
+| **job_id 출력** | MJ 잡 서밋 노드(Vary/Remix/Upscale/Pan/Animate/ExtendVideo)에 연결 시만 무시 |
 
 ```
 Imagine(enqueue=true) → image_0 → PreviewImage
-  → enqueue 무시, 정상 폴링 후 이미지 반환
+  → enqueue 무시 (Image 출력 연결)
+
+Imagine(enqueue=true) → job_id → MJ_Vary
+  → enqueue 무시 (job_id가 MJ 잡 서밋 노드에 연결)
+
+Imagine(enqueue=true) → job_id → MJ_Download
+  → enqueue 유지, 즉시 job_id 반환 (Download는 서밋 노드 아님)
 
 Imagine(enqueue=true) → [출력 연결 없음]
-  → enqueue 유지, 즉시 job_id 반환
-```
-
-**비디오 노드** (Animate, AnimateFromImage, ExtendVideo): job_id가 **MJ 생성 노드**에 연결될 때만 무시
-
-```
-Animate(enqueue=true) → job_id → MJ_ExtendVideo
-  → enqueue 무시, 정상 폴링 후 job_id 반환
-
-Animate(enqueue=true) → job_id → MJ_LoadVideo
   → enqueue 유지, 즉시 job_id 반환
 ```
 
