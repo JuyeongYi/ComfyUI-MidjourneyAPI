@@ -23,30 +23,39 @@ def _preview_ui(images: torch.Tensor) -> ui.PreviewImage:
     return ui.PreviewImage(images)
 
 
-_MJ_NODE_IDS = {
+# job_id를 입력으로 받는 MJ 잡 서밋 노드
+_MJ_JOB_SUBMIT_NODE_IDS = {
     "MJ_Vary", "MJ_Remix", "MJ_Upscale", "MJ_Pan",
     "MJ_Animate", "MJ_ExtendVideo",
 }
 
 
-def _has_any_downstream(unique_id: str, prompt: dict) -> bool:
-    """이 노드의 출력이 어떤 노드에든 연결되어 있으면 True 반환 (이미지 노드용)."""
+def _image_connected(unique_id: str, prompt: dict, image_indices: frozenset) -> bool:
+    """지정된 Image 출력 슬롯 중 하나라도 어떤 노드에든 연결되어 있으면 True."""
     for node in prompt.values():
         for link in node.get("inputs", {}).values():
-            if isinstance(link, list) and link[0] == unique_id:
+            if isinstance(link, list) and link[0] == unique_id and link[1] in image_indices:
                 return True
     return False
 
 
-def _has_mj_downstream(unique_id: str, prompt: dict) -> bool:
-    """이 노드의 job_id 출력이 MJ 생성 노드에 연결되어 있으면 True 반환 (비디오 노드용)."""
+def _job_id_to_mj(unique_id: str, prompt: dict, job_id_idx: int) -> bool:
+    """job_id 출력(job_id_idx)이 MJ 잡 서밋 노드에 연결되어 있으면 True."""
     for node in prompt.values():
-        if node.get("class_type") not in _MJ_NODE_IDS:
+        if node.get("class_type") not in _MJ_JOB_SUBMIT_NODE_IDS:
             continue
         for link in node.get("inputs", {}).values():
-            if isinstance(link, list) and link[0] == unique_id:
+            if isinstance(link, list) and link[0] == unique_id and link[1] == job_id_idx:
                 return True
     return False
+
+
+def _should_override_enqueue(unique_id, prompt, image_indices, job_id_idx) -> bool:
+    """Image 출력이 연결됐거나 job_id가 MJ 잡 서밋 노드에 연결됐으면 True."""
+    return (
+        _image_connected(unique_id, prompt, image_indices) or
+        _job_id_to_mj(unique_id, prompt, job_id_idx)
+    )
 
 
 def _enqueue_image_outputs(job, n: int = 4) -> io.NodeOutput:
@@ -103,8 +112,9 @@ class MidJourneyImagine(io.ComfyNode):
 
         job = client.imagine(prompt, wait=False, mode=mode, **kwargs)
         log_job("Imagine", job.id, prompt=prompt, mode=mode, **kwargs)
-        if enqueue and cls.hidden.prompt and _has_any_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] Imagine: enqueue 무시 — 출력이 다른 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _should_override_enqueue(
+                cls.hidden.unique_id, cls.hidden.prompt, frozenset({0,1,2,3}), 4):
+            print("[MJ] Imagine: enqueue 무시 — image 또는 job_id 출력이 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_image_outputs(job, n=4)
@@ -154,8 +164,9 @@ class MidJourneyVary(io.ComfyNode):
         label = "Strong" if strong else "Subtle"
         job = client.vary(job_id, index, strong=strong, wait=False, mode=mode)
         log_job(f"Vary ({label})", job.id, mode=mode, source=job_id, index=index)
-        if enqueue and cls.hidden.prompt and _has_any_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] Vary: enqueue 무시 — 출력이 다른 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _should_override_enqueue(
+                cls.hidden.unique_id, cls.hidden.prompt, frozenset({0,1,2,3}), 4):
+            print("[MJ] Vary: enqueue 무시 — image 또는 job_id 출력이 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_image_outputs(job, n=4)
@@ -213,8 +224,9 @@ class MidJourneyRemix(io.ComfyNode):
         job = client.remix(job_id, index, prompt,
                            strong=strong, wait=False, mode=mode, stealth=stealth, **kwargs)
         log_job(f"Remix ({label})", job.id, prompt=prompt, mode=mode, source=job_id, index=index, **kwargs)
-        if enqueue and cls.hidden.prompt and _has_any_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] Remix: enqueue 무시 — 출력이 다른 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _should_override_enqueue(
+                cls.hidden.unique_id, cls.hidden.prompt, frozenset({0,1,2,3}), 4):
+            print("[MJ] Remix: enqueue 무시 — image 또는 job_id 출력이 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_image_outputs(job, n=4)
@@ -262,8 +274,9 @@ class MidJourneyUpscale(io.ComfyNode):
         client = get_client()
         job = client.upscale(job_id, index, upscale_type=upscale_type, wait=False, mode=mode)
         log_job("Upscale", job.id, mode=mode, source=job_id, index=index, type=upscale_type)
-        if enqueue and cls.hidden.prompt and _has_any_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] Upscale: enqueue 무시 — 출력이 다른 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _should_override_enqueue(
+                cls.hidden.unique_id, cls.hidden.prompt, frozenset({0}), 1):
+            print("[MJ] Upscale: enqueue 무시 — image 또는 job_id 출력이 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_image_outputs(job, n=1)
@@ -318,8 +331,9 @@ class MidJourneyPan(io.ComfyNode):
         client = get_client()
         job = client.pan(job_id, index, direction=direction, prompt=_build_prompt(prompt, no), wait=False, mode=mode)
         log_job(f"Pan ({direction})", job.id, prompt=prompt, mode=mode, source=job_id, index=index)
-        if enqueue and cls.hidden.prompt and _has_any_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] Pan: enqueue 무시 — 출력이 다른 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _should_override_enqueue(
+                cls.hidden.unique_id, cls.hidden.prompt, frozenset({0,1,2,3}), 4):
+            print("[MJ] Pan: enqueue 무시 — image 또는 job_id 출력이 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_image_outputs(job, n=4)
@@ -429,8 +443,8 @@ class MidJourneyAnimate(io.ComfyNode):
         kw = _video_kwargs(video_params)
         job = client.animate(job_id, index, prompt=_build_prompt(prompt, no), wait=False, **kw)
         log_job("Animate", job.id, source=job_id, index=index, **kw)
-        if enqueue and cls.hidden.prompt and _has_mj_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] Animate: enqueue 무시 — job_id가 MJ 생성 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _job_id_to_mj(cls.hidden.unique_id, cls.hidden.prompt, 0):
+            print("[MJ] Animate: enqueue 무시 — job_id가 MJ 잡 서밋 노드에 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_video_output(job)
@@ -484,8 +498,8 @@ class MidJourneyAnimateFromImage(io.ComfyNode):
         job = client.animate_from_image(start_path, end_path, prompt=_build_prompt(prompt, no),
                                         wait=False, **kw)
         log_job("AnimateFromImage", job.id, **kw)
-        if enqueue and cls.hidden.prompt and _has_mj_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] AnimateFromImage: enqueue 무시 — job_id가 MJ 생성 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _job_id_to_mj(cls.hidden.unique_id, cls.hidden.prompt, 0):
+            print("[MJ] AnimateFromImage: enqueue 무시 — job_id가 MJ 잡 서밋 노드에 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_video_output(job)
@@ -540,8 +554,8 @@ class MidJourneyExtendVideo(io.ComfyNode):
         job = client.extend_video(job_id, index, end_image=end_path,
                                   prompt=_build_prompt(prompt, no), wait=False, **kw)
         log_job("ExtendVideo", job.id, source=job_id, index=index, **kw)
-        if enqueue and cls.hidden.prompt and _has_mj_downstream(cls.hidden.unique_id, cls.hidden.prompt):
-            print("[MJ] ExtendVideo: enqueue 무시 — job_id가 MJ 생성 노드에 연결됨")
+        if enqueue and cls.hidden.prompt and _job_id_to_mj(cls.hidden.unique_id, cls.hidden.prompt, 0):
+            print("[MJ] ExtendVideo: enqueue 무시 — job_id가 MJ 잡 서밋 노드에 연결됨")
             enqueue = False
         if enqueue:
             return _enqueue_video_output(job)
