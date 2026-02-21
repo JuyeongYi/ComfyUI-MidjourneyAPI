@@ -1,12 +1,20 @@
 import { app } from "../../scripts/app.js";
 
-// node_type → { imageCount, jobIdSlot (output index of job_id, -1 if none) }
+// node_type → { imageCount?, jobIdSlot, isVideo? }
+// imageCount: 이미지 출력 수 (없으면 이미지 메뉴 비표시)
+// jobIdSlot:  job_id 출력 슬롯 인덱스 (-1이면 없음)
+// isVideo:    비디오 노드 여부 (Video 서브메뉴 표시)
 const MJ_NODES = {
-    "MJ_Imagine":  { imageCount: 4, jobIdSlot: 4 },
-    "MJ_Vary":     { imageCount: 4, jobIdSlot: 4 },
-    "MJ_Pan":      { imageCount: 4, jobIdSlot: 4 },
-    "MJ_Upscale":  { imageCount: 1, jobIdSlot: 1 },
-    "MJ_Download": { imageCount: 4, jobIdSlot: -1 },
+    "MJ_Imagine":          { imageCount: 4, jobIdSlot: 4 },
+    "MJ_Vary":             { imageCount: 4, jobIdSlot: 4 },
+    "MJ_Remix":            { imageCount: 4, jobIdSlot: 4 },
+    "MJ_Pan":              { imageCount: 4, jobIdSlot: 4 },
+    "MJ_Upscale":          { imageCount: 1, jobIdSlot: 1 },
+    "MJ_Download":         { imageCount: 4, jobIdSlot: -1 },
+    "MJ_Animate":          { jobIdSlot: 0, isVideo: true },
+    "MJ_AnimateFromImage": { jobIdSlot: 0, isVideo: true },
+    "MJ_ExtendVideo":      { jobIdSlot: 0, isVideo: true },
+    "MJ_LoadVideo":        { jobIdSlot: -1 },
 };
 
 app.registerExtension({
@@ -22,20 +30,26 @@ app.registerExtension({
                 origGetExtraMenuOptions.apply(this, arguments);
             }
 
-            const count = cfg.imageCount;
-            const plural = count > 1 ? "s" : "";
-            const menuItems = [
-                {
-                    content: `Connect Preview Image${plural}`,
-                    callback: () => addImageNodes(this, "PreviewImage", count, cfg.jobIdSlot),
-                },
-                {
-                    content: `Connect Save Image${plural}`,
-                    callback: () => addImageNodes(this, "SaveImage", count, cfg.jobIdSlot),
-                },
-            ];
+            const menuItems = [];
 
-            if (cfg.jobIdSlot >= 0) {
+            // 이미지 노드 전용: Preview/Save 연결 메뉴
+            if (cfg.imageCount) {
+                const count = cfg.imageCount;
+                const plural = count > 1 ? "s" : "";
+                menuItems.push(
+                    {
+                        content: `Connect Preview Image${plural}`,
+                        callback: () => addImageNodes(this, "PreviewImage", count, cfg.jobIdSlot),
+                    },
+                    {
+                        content: `Connect Save Image${plural}`,
+                        callback: () => addImageNodes(this, "SaveImage", count, cfg.jobIdSlot),
+                    },
+                );
+            }
+
+            // 이미지 노드 전용: Midjourney 서브메뉴 (job_id 출력이 있는 경우)
+            if (cfg.imageCount && cfg.jobIdSlot >= 0) {
                 menuItems.push({
                     content: "Midjourney",
                     submenu: {
@@ -51,6 +65,21 @@ app.registerExtension({
                                         {
                                             content: "Subtle",
                                             callback: () => addJobNodes(this, "MJ_Vary", cfg.jobIdSlot, cfg.imageCount, { strong: false }),
+                                        },
+                                    ],
+                                },
+                            },
+                            {
+                                content: "Remix",
+                                submenu: {
+                                    options: [
+                                        {
+                                            content: "Strong",
+                                            callback: () => addJobNodes(this, "MJ_Remix", cfg.jobIdSlot, cfg.imageCount, { strong: true }),
+                                        },
+                                        {
+                                            content: "Subtle",
+                                            callback: () => addJobNodes(this, "MJ_Remix", cfg.jobIdSlot, cfg.imageCount, { strong: false }),
                                         },
                                     ],
                                 },
@@ -83,6 +112,29 @@ app.registerExtension({
                                         callback: () => addJobNodes(this, "MJ_Pan", cfg.jobIdSlot, cfg.imageCount, { direction: dir }),
                                     })),
                                 },
+                            },
+                            {
+                                content: "Animate",
+                                callback: () => addJobNodes(this, "MJ_Animate", cfg.jobIdSlot, cfg.imageCount),
+                            },
+                        ],
+                    },
+                });
+            }
+
+            // 비디오 노드 전용: Video 서브메뉴
+            if (cfg.isVideo) {
+                menuItems.unshift({
+                    content: "Video",
+                    submenu: {
+                        options: [
+                            {
+                                content: "Extend",
+                                callback: () => addJobNodes(this, "MJ_ExtendVideo", cfg.jobIdSlot, 1),
+                            },
+                            {
+                                content: "Load",
+                                callback: () => addJobNodes(this, "MJ_LoadVideo", cfg.jobIdSlot, 1),
                             },
                         ],
                     },

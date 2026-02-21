@@ -8,8 +8,10 @@ from comfy_api.latest import io
 from .const import *
 from ..utils import image_tensor_to_temp_file, list_presets, load_preset, save_preset
 
-# Custom type for passing parameter dicts between nodes
-MJ_PARAMS = io.Custom("MJ_PARAMS")
+# 커스텀 타입
+MJ_PARAMS       = io.Custom("MJ_PARAMS")
+MJ_VIDEO_PARAMS = io.Custom("MJ_VIDEO_PARAMS")
+MJ_JOB_ID       = io.Custom("MJ_JOB_ID")
 
 
 class ImagineV7Params(io.ComfyNode):
@@ -48,6 +50,9 @@ class ImagineV7Params(io.ComfyNode):
                                     tooltip="스타일 레퍼런스 (이미지 또는 URL/코드)"),
                     types=[io.Image],
                 ),
+                io.String.Input("sv", display_name="Style Version", default="",
+                                optional=True,
+                                tooltip=f"sref 코드가 생성된 MJ 버전. 허용값: {', '.join(SV_OPTIONS)}. 미지정 시 MJ가 자동 판단. sv=8은 현재 미지원"),
                 io.Int.Input("sw", display_name="Style Weight", default=100, min=0, max=1000,
                              optional=True),
                 io.MultiType.Input(
@@ -66,7 +71,7 @@ class ImagineV7Params(io.ComfyNode):
     @classmethod
     def execute(cls, ar_w, ar_h, stylize, chaos, weird, seed, quality,
                 raw, tile, draft, mode, visibility, personalize, personalize_code,
-                image=None, iw=None, sref=None, sw=None, oref=None, ow=None) -> io.NodeOutput:
+                image=None, iw=None, sref=None, sw=None, sv=None, oref=None, ow=None) -> io.NodeOutput:
         params: dict = {
             "ar": f"{ar_w}:{ar_h}",
             "stylize": stylize,
@@ -83,22 +88,28 @@ class ImagineV7Params(io.ComfyNode):
         if visibility != "default":
             params["visibility"] = visibility
 
-        # image prompt — include iw only when image is present
+        # 이미지 프롬프트 — image가 있을 때만 iw 포함
         if image is not None:
             params["image"] = image_tensor_to_temp_file(image)
             if iw is not None:
                 params["iw"] = iw
 
-        # sref — Image tensor → temp file, String → pass through
+        # sref — 이미지 텐서 → 임시 파일 변환, 문자열 → 그대로 사용
+        # sref 없으면 sw/sv 모두 무시. sref가 이미지면 sv 무시.
         if sref is not None and sref != "":
             if isinstance(sref, torch.Tensor):
                 params["sref"] = image_tensor_to_temp_file(sref)
+                # 이미지 sref는 코드 버전 개념이 없으므로 sv 무시
             else:
                 params["sref"] = str(sref)
+                if sv:
+                    if sv not in SV_OPTIONS:
+                        raise ValueError(f"sv 허용값: {SV_OPTIONS}, 입력값: {sv!r}")
+                    params["sv"] = int(sv)
             if sw is not None:
                 params["sw"] = sw
 
-        # oref — same pattern as sref
+        # oref — sref와 동일한 패턴
         if oref is not None and oref != "":
             if isinstance(oref, torch.Tensor):
                 params["oref"] = image_tensor_to_temp_file(oref)
@@ -107,7 +118,7 @@ class ImagineV7Params(io.ComfyNode):
             if ow is not None:
                 params["ow"] = ow
 
-        # personalize 3-state
+        # personalize 3가지 상태 처리
         if personalize == "default":
             params["personalize"] = ""
         elif personalize == "custom" and personalize_code:
@@ -160,4 +171,39 @@ class LoadImagineParams(io.ComfyNode):
     @classmethod
     def execute(cls, name) -> io.NodeOutput:
         params = load_preset(name)
+        return io.NodeOutput(params)
+
+
+class VideoParams(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="MJ_VideoParams",
+            display_name="Video Params",
+            category="Midjourney/params",
+            description="비디오 생성 파라미터를 설정합니다.",
+            inputs=[
+                io.Combo.Input("motion", options=list(MotionIntensity), optional=True,
+                               tooltip="모션 강도 (미연결 시 MJ 기본값)"),
+                io.Combo.Input("resolution", options=list(VideoResolution),
+                               default=VideoResolution.R480),
+                io.Int.Input("batch_size", default=1, min=1, max=4,
+                             tooltip="생성할 비디오 변형 수 (--bs)"),
+                io.Combo.Input("mode", options=list(SpeedMode), default=SpeedMode.FAST),
+                io.Boolean.Input("stealth", default=False, tooltip="비공개 생성 (Stealth 모드)"),
+            ],
+            outputs=[
+                MJ_VIDEO_PARAMS.Output(display_name="video_params"),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, motion, resolution, batch_size, mode, stealth) -> io.NodeOutput:
+        params = {
+            "motion": motion,
+            "resolution": resolution,
+            "batch_size": batch_size,
+            "mode": mode,
+            "stealth": stealth,
+        }
         return io.NodeOutput(params)

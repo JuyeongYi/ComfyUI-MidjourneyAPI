@@ -1,4 +1,4 @@
-"""Shared utilities for ComfyUI-MidJourney nodes."""
+"""ComfyUI-MidJourney 노드 공용 유틸리티."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _ENV_PATH = _DIR.parent.parent / ".env"  # ComfyUI root
 _PRESETS_DIR = _DIR / "presets"
 
 # ---------------------------------------------------------------------------
-# Client singleton
+# 클라이언트 싱글톤
 # ---------------------------------------------------------------------------
 
 _client: MidjourneyClient | None = None
@@ -36,7 +36,7 @@ def get_client() -> MidjourneyClient:
 
 
 # ---------------------------------------------------------------------------
-# Polling with progress
+# 진행률 표시와 함께 폴링
 # ---------------------------------------------------------------------------
 
 
@@ -46,9 +46,9 @@ def poll_with_progress(
     timeout: float = 600,
     **_kwargs,
 ) -> Job:
-    """Poll job status, report 100% to ComfyUI on completion."""
+    """Job 상태를 폴링하고, 완료 시 ComfyUI에 100% 진행률을 보고합니다."""
     if not job.id:
-        raise RuntimeError("Job submission failed: empty job ID returned from API")
+        raise RuntimeError("Job 제출 실패: API에서 빈 job ID가 반환되었습니다")
 
     client = get_client()
     pbar = comfy.utils.ProgressBar(1)
@@ -57,7 +57,7 @@ def poll_with_progress(
     while True:
         if time.time() - start >= timeout:
             from midjourney_api.exceptions import MidjourneyError
-            raise MidjourneyError(f"Job {job.id} timed out after {timeout}s")
+            raise MidjourneyError(f"Job {job.id}이(가) {timeout}초 후 타임아웃되었습니다")
 
         completed = client._api.get_job_status(job.id)
         if completed is not None:
@@ -71,7 +71,7 @@ def poll_with_progress(
 
 
 # ---------------------------------------------------------------------------
-# Image helpers
+# 이미지 헬퍼
 # ---------------------------------------------------------------------------
 
 
@@ -79,21 +79,21 @@ def download_and_load_images(
     job: Job,
     indices: list[int] | None = None,
 ) -> torch.Tensor:
-    """Download job images in memory, return [N,H,W,C] float32 tensor."""
+    """Job 이미지를 메모리에 다운로드하고 [N,H,W,C] float32 텐서를 반환합니다."""
     client = get_client()
     data_list = client.download_images_bytes(job, size=1024, indices=indices)
     tensors: list[torch.Tensor] = []
     for data in data_list:
         img = Image.open(BytesIO(data)).convert("RGB")
         arr = np.array(img, dtype=np.float32) / 255.0
-        tensors.append(torch.from_numpy(arr).unsqueeze(0))  # [1,H,W,C]
-    return torch.cat(tensors, dim=0)  # [N,H,W,C]
+        tensors.append(torch.from_numpy(arr).unsqueeze(0))  # [1,H,W,C] 형태
+    return torch.cat(tensors, dim=0)  # [N,H,W,C] 형태
 
 
 def try_download_all(
     job: Job,
 ) -> list[torch.Tensor | None]:
-    """Try downloading indices 0-3. Returns list of 4 tensors (None if failed)."""
+    """인덱스 0-3 다운로드를 시도합니다. 4개의 텐서 리스트를 반환하며, 실패 시 None입니다."""
     results: list[torch.Tensor | None] = []
     for i in range(4):
         try:
@@ -102,12 +102,18 @@ def try_download_all(
         except Exception:
             results.append(None)
     if not any(r is not None for r in results):
-        raise RuntimeError(f"No images found for job {job.id}")
+        raise RuntimeError(f"Job {job.id}에서 이미지를 찾을 수 없습니다")
     return results
 
 
+def video_bytes_to_video_input(data: bytes):
+    """Raw MP4 bytes → ComfyUI VideoInput (메모리 내, 디스크 I/O 없음)."""
+    from comfy_api.latest._input_impl.video_types import VideoFromFile
+    return VideoFromFile(BytesIO(data))
+
+
 def image_tensor_to_temp_file(image: torch.Tensor) -> str:
-    """Convert a single IMAGE tensor [1,H,W,C] to a temp .png file path."""
+    """단일 IMAGE 텐서 [1,H,W,C]를 임시 .png 파일 경로로 변환합니다."""
     arr = (image.squeeze(0).cpu().numpy() * 255).clip(0, 255).astype(np.uint8)
     img = Image.fromarray(arr)
     fd, path = tempfile.mkstemp(suffix=".png", prefix="mj_img_")
@@ -117,14 +123,14 @@ def image_tensor_to_temp_file(image: torch.Tensor) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Console logging
+# 콘솔 로깅
 # ---------------------------------------------------------------------------
 
 _RST = "\033[0m"
 _BOLD = "\033[1m"
 _GRAY = "\033[90m"
-_C1 = "\033[36m"  # cyan — 파라미터 이름 (홀수)
-_C2 = "\033[33m"  # yellow — 파라미터 이름 (짝수)
+_C1 = "\033[36m"  # 청록색 — 파라미터 이름 (홀수)
+_C2 = "\033[33m"  # 황색 — 파라미터 이름 (짝수)
 
 
 _SHORT = {
@@ -134,11 +140,12 @@ _SHORT = {
     "index": "idx", "direction": "dir", "strong": "strong",
     "type": "type", "no": "no", "image": "img", "iw": "iw",
     "sref": "sref", "sw": "sw", "oref": "oref", "ow": "ow",
+    "sv": "sv", "motion": "motion", "resolution": "res",
 }
 
 
 def log_job(action: str, job_id: str, prompt: str = "", mode: str = "", **params):
-    """Print colored job info to console."""
+    """컬러 job 정보를 콘솔에 출력합니다."""
     print(f"{_BOLD}[MJ] {action}{_RST}  job={_GRAY}{job_id}{_RST}  mode={_GRAY}{mode}{_RST}")
     if prompt:
         print(f"  {_BOLD}Prompt:{_RST} {_BOLD}{prompt}{_RST}")
@@ -151,7 +158,7 @@ def log_job(action: str, job_id: str, prompt: str = "", mode: str = "", **params
 
 
 # ---------------------------------------------------------------------------
-# Preset I/O
+# 프리셋 입출력
 # ---------------------------------------------------------------------------
 
 

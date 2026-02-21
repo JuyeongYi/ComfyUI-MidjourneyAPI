@@ -1,11 +1,11 @@
-"""ComfyUI-MidJourney: Midjourney image generation nodes for ComfyUI."""
+"""ComfyUI-MidJourney: ComfyUI용 Midjourney 이미지 생성 노드."""
 
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 _DIR = Path(__file__).parent
-_COMFYUI_ROOT = _DIR.parent.parent  # custom_nodes/<this> → ComfyUI root
+_COMFYUI_ROOT = _DIR.parent.parent  # custom_nodes/<this> → ComfyUI 루트
 load_dotenv(_COMFYUI_ROOT / ".env")
 
 from comfy_api.latest import ComfyExtension, io
@@ -19,10 +19,16 @@ from .nodes import (
     MidJourneyPan,
     MidJourneyUpscale,
     MidJourneyVary,
+    MidJourneyRemix,
     SaveImagineParams,
+    VideoParams,
     KEYWORD_NODES,
     MidJourneyKeywordJoin,
     MJ_StyleSelect,
+    MidJourneyAnimate,
+    MidJourneyAnimateFromImage,
+    MidJourneyExtendVideo,
+    MidJourneyLoadVideo,
 )
 
 WEB_DIRECTORY = "./web"
@@ -33,9 +39,15 @@ _NODES = [
     LoadImagineParams,
     MidJourneyImagine,
     MidJourneyVary,
+    MidJourneyRemix,
     MidJourneyUpscale,
     MidJourneyPan,
     MidJourneyDownload,
+    VideoParams,
+    MidJourneyAnimate,
+    MidJourneyAnimateFromImage,
+    MidJourneyExtendVideo,
+    MidJourneyLoadVideo,
     *KEYWORD_NODES,
     MidJourneyKeywordJoin,
     MJ_StyleSelect,
